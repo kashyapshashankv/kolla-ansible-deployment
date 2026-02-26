@@ -1,0 +1,28 @@
+- name: Assign Network
+  hosts: all
+  become: yes
+  tasks:
+    # - name: Configure Netplan
+    #   shell: |
+    #     rm -rf /etc/netplan/50-*
+
+    #     echo "    ens35:
+    #           dhcp4: no
+    #           dhcp6: no" >> /etc/netplan/99-netcfg-vmware.yaml
+
+    #     echo "    ens36:
+    #           dhcp4: no
+    #           dhcp6: no" >> /etc/netplan/99-netcfg-vmware.yaml
+            
+            
+    #     netplan apply
+
+    - name: Check for Update
+      shell: apt update -y 
+
+    - name: Apply Update
+      shell: apt upgrade -y 
+
+
+    - name: Reboot
+      reboot:

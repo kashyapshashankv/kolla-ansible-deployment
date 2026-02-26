@@ -1,0 +1,5 @@
+user_name   = "1570658"
+tenant_name = "Tenant 1"
+password    = "VMware1!"
+auth_url    = "https://console.tcs.cloud:5000/v3"
+region      = "TCS"

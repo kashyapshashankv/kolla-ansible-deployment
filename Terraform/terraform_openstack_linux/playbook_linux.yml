@@ -1,0 +1,6 @@
+- name: Execute Playbook
+  hosts: all
+  become: yes
+  tasks:
+    - name: first task
+      shell: whoami

@@ -1,0 +1,25 @@
+- name: Fix horizon logo
+  hosts: control
+  become: yes
+  tasks:
+    - name: Transfer Logo to containers
+      shell: |
+        docker exec horizon cp /var/lib/kolla/venv/lib/python3.12/site-packages/static/dashboard/img/favicon.ico /var/lib/kolla/venv/lib/python3.12/site-packages/static/dashboard/img/favicon.ico.org
+        docker cp /etc/kolla/skyline-console/logos/favicon.ico horizon:/var/lib/kolla/venv/lib/python3.12/site-packages/static/dashboard/img/favicon.ico
+        docker exec horizon chmod 644 /var/lib/kolla/venv/lib/python3.12/site-packages/static/dashboard/img/favicon.ico
+
+        docker exec horizon cp /var/lib/kolla/venv/lib/python3.12/site-packages/static/dashboard/img/logo-splash.svg /var/lib/kolla/venv/lib/python3.12/site-packages/static/dashboard/img/logo-splash.svg.org
+        docker cp /etc/kolla/skyline-console/logos/asset/image/cloud-logo.svg horizon:/var/lib/kolla/venv/lib/python3.12/site-packages/static/dashboard/img/logo-splash.svg
+        docker exec horizon chmod 644 /var/lib/kolla/venv/lib/python3.12/site-packages/static/dashboard/img/logo-splash.svg
+
+        docker exec horizon cp /var/lib/kolla/venv/lib/python3.12/site-packages/openstack_dashboard/themes/material/templates/material/openstack-one-color.svg /var/lib/kolla/venv/lib/python3.12/site-packages/openstack_dashboard/themes/material/templates/material/openstack-one-color.svg.org
+        docker cp /etc/kolla/skyline-console/logos/asset/image/openstack-one-color.svg horizon:/var/lib/kolla/venv/lib/python3.12/site-packages/openstack_dashboard/themes/material/templates/material/openstack-one-color.svg
+        docker exec horizon chmod 644 /var/lib/kolla/venv/lib/python3.12/site-packages/openstack_dashboard/themes/material/templates/material/openstack-one-color.svg
+
+        docker exec horizon cp /var/lib/kolla/venv/lib/python3.12/site-packages/openstack_dashboard/themes/material/templates/material/openstack-one-color-alt.svg /var/lib/kolla/venv/lib/python3.12/site-packages/openstack_dashboard/themes/material/templates/material/openstack-one-color-alt.svg.org
+        docker cp /etc/kolla/skyline-console/logos/asset/image/openstack-one-color-alt.svg horizon:/var/lib/kolla/venv/lib/python3.12/site-packages/openstack_dashboard/themes/material/templates/material/openstack-one-color-alt.svg
+        docker exec horizon chmod 644 /var/lib/kolla/venv/lib/python3.12/site-packages/openstack_dashboard/themes/material/templates/material/openstack-one-color-alt.svg
+
+        docker exec horizon cp /var/lib/kolla/venv/lib/python3.12/site-packages/static/dashboard/img/logo.svg /var/lib/kolla/venv/lib/python3.12/site-packages/static/dashboard/img/logo.svg.org
+        docker cp /etc/kolla/skyline-console/logos/asset/image/cloud-logo.svg horizon:/var/lib/kolla/venv/lib/python3.12/site-packages/static/dashboard/img/logo.svg
+        docker exec horizon chmod 644 /var/lib/kolla/venv/lib/python3.12/site-packages/static/dashboard/img/logo.svg

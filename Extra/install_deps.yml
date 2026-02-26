@@ -1,0 +1,8 @@
+- name: Fix Cinder Storage
+  hosts: storage
+  become: yes
+  tasks:
+    - name: Install Dependecies and Restart Container
+      shell: |
+        docker exec -it cinder_volume bash -c "pip3 install storops"
+        docker restart cinder_volume

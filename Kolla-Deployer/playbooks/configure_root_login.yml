@@ -1,0 +1,23 @@
+---
+- hosts: all
+  become: yes
+  tasks:
+    - name: Enable root login via SSH
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^PermitRootLogin'
+        line: 'PermitRootLogin yes'
+        state: present
+        backup: yes
+
+    - name: Set root password
+      user:
+        name: root
+        password: "{{ root_password | password_hash('sha512') }}"
+      vars:
+        root_password: "VMware1!" # Replace with a strong password or use ansible-vault
+
+    - name: Restart SSH
+      service:
+        name: ssh
+        state: restarted

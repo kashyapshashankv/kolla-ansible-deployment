@@ -1,0 +1,9 @@
+#cloud-config
+timezone: Asia/Kolkata
+keyboard:
+  layout: us
+users:
+  - name: Administrator
+    passwd: P@ssW0rD
+runcmd:
+  - net user admin /delete

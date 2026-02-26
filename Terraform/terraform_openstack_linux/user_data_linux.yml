@@ -1,0 +1,12 @@
+#cloud-config
+ssh_pwauth: True
+users:
+  - default
+  - name: tcsadmin
+    passwd: "$6$8RWRSYlOfews.1xd$Lz/j/eeW7zFtPwEsJpKnIPfrG7wcJYABdh/riyYWe8LuRUp/B2wSnlukhJjU47wBHvwc2dSgyjH/nd.6aHlGI0"
+    shell: /bin/bash
+    lock-passwd: false
+    ssh_pwauth: True
+    chpasswd: { expire: False }
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: users, admin

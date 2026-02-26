@@ -1,0 +1,21 @@
+[all:vars]
+ansible_user=tcsadmin
+ansible_password=VMware1!
+ansible_sudo_pass=VMware1!
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+
+
+[storage]
+kolla-storage-01
+kolla-storage-02
+kolla-storage-03
+
+[controller]
+kolla-controller-01
+kolla-controller-02
+kolla-controller-03
+
+[compute]
+kolla-compute-01
+kolla-compute-02
+kolla-compute-03

@@ -1,0 +1,49 @@
+mkdir /etc/kolla/mirror
+
+cephadm shell --mount /etc/kolla/mirror
+ 
+ 
+rbd mirror pool peer bootstrap create --site-name site-a volumes >> token
+ 
+ 
+ 
+eyJmc2lkIjoiODYyYTc5NmQtNjYzNC0xMWYwLWJjNmUtMDA1MDU2OTg4NTZmIiwiY2xpZW50X2lkIjoicmJkLW1pcnJvci1wZWVyIiwia2V5IjoiQVFCSFEzNW9ZcEtHR3hBQUgzaVk3NG95MU5PRk52WUhSaHNTaUE9PSIsIm1vbl9ob3N0IjoiW3YyOjE5Mi4xNjguMjAuMTkwOjMzMDAvMCx2MToxOTIuMTY4LjIwLjE5MDo2Nzg5LzBdIn0=
+ 
+ 
+ 
+rbd mirror pool peer bootstrap import --site-name site-b volumes token
+ 
+ 
+ 
+1. Edit the Ceph configuration file:
+
+Locate and open your Ceph configuration file (usually /etc/ceph/ceph.conf).
+
+2. Add or modify the rbd_default_features setting:
+
+Add the following line within the [global] section of the configuration file or modify it if it already exists:
+
+Code
+ 
+   rbd_default_features = 125
+
+The value 125 corresponds to the feature bits for exclusive-lock (1), object-map (4), fast-diff (8), and journaling (128), according to Ceph documentation. 
+
+Restart Ceph Monitors: After modifying the configuration file, you need to restart the Ceph monitors for the changes to take effect. You can do this by running: 
+
+Code
+ 
+   sudo systemctl restart ceph-mon.*
+ 
+cinder manageable-list  railtel-site2@rbd-1
+ 
+rbd mirror image demote --force volumes/image1
+
+rbd mirror image promote --force volumes/image1
+ 
+ 
+cinder manage --name image1 --volume-type __DEFAULT__ railtel-site2@rbd-1 image1
+ 
+ 
+rbd ls -p volumes
+ 

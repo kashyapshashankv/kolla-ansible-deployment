@@ -1,0 +1,269 @@
+all server
+----------------
+root@kolla-compute-02:/etc/apt/apt.conf.d# cat 90curtin-aptproxy
+Acquire::http::Proxy "http://172.30.19.16:3128";
+Acquire::https::Proxy "http://172.30.19.16:3128";
+
+---------------------------------
+all Servers (except dev)
+---------------------------------
+
+rm -rf /etc/netplan/50.*
+
+echo "    ens256:
+      dhcp4: no
+      dhcp6: no" >> /etc/netplan/99-netcfg-vmware.yaml
+
+echo "    ens224:
+      dhcp4: no
+      dhcp6: no" >> /etc/netplan/99-netcfg-vmware.yaml
+	  
+	  
+netplan apply
+
+
+--------------------
+all server 
+--------------------
+
+apt update && apt upgrade -y
+
+init 6
+
+Dev Servers
+sudo apt install sshpass -y 
+sudo apt install apt-transport-https ca-certificates curl software-properties-common -y
+Export any Proxy if Required
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable" -y
+sudo apt install docker-ce -y
+
+# COnfigure Proxy for Docker
+mkdir -p /etc/systemd/system/docker.service.d
+
+echo '[Service]
+Environment="HTTPS_PROXY=http://172.30.19.16:3128"' >> /etc/systemd/system/docker.service.d/http-proxy.conf
+
+systemctl daemon-reload
+
+service docker restart
+
+docker run -d -p 5000:5000 --restart always --name registry registry:2.7
+
+sudo apt install git python3-dev libffi-dev gcc libssl-dev libdbus-glib-1-dev -y
+
+sudo apt install python3-venv -y
+
+python3 -m venv kolla
+
+source kolla/bin/activate
+
+export proxy
+
+pip install -U pip
+
+pip install git+https://github.com/openstack/kolla-ansible@stable/2024.2
+
+
+sudo mkdir -p /etc/kolla
+sudo chown $USER:$USER /etc/kolla
+
+
+
+kolla-ansible install-deps
+
+Update using mentioned URL - https://review.opendev.org/c/openstack/kolla-ansible/+/915560/2/ansible/roles/nova-cell/handlers/main.yml
+
+
+
+cp kolla/share/kolla-ansible/etc_examples/kolla/passwords.yml /etc/kolla/.
+touch /etc/kolla/globals.yml
+
+pip install dbus-python
+pip install docker
+
+
+mkdir -p /etc/kolla/certificates
+
+
+mkdir -p /etc/kolla/config/horizon/
+
+cat << EOF > /etc/kolla/config/horizon/_9999-custom-settings_py
+SITE_BRANDING = "TCS SovereignSecure Cloud Platform"
+SITE_BRANDING_LINK  = "https://www.tcs.com"
+EOF
+
+kolla-ansible certificates -i multinode
+
+
+
+
+kolla-ansible bootstrap-servers -i multinode
+
+
+kolla-ansible prechecks -i multinode
+
+kolla-ansible deploy -i multinode
+
+
+
+
+openssl req -nodes -new -config openssl-kolla-backend.cnf -keyout myserver.key -out myserver.csr
+
+
+
+
+
+
+mkdir -p /etc/kolla/config/multipath
+cat << EOF > /etc/kolla/config/multipath/multipath.conf
+defaults {
+    user_friendly_names no
+}
+EOF
+
+mkdir -p /etc/kolla/config/nova
+cat << EOF > /etc/kolla/config/nova/nova.conf
+[libvirt]
+volume_use_multipath = True
+EOF
+
+
+cat << EOF > /etc/kolla/config/cinder.conf
+[DEFAULT]
+enabled_backends = unity
+default_volume_type = Default
+
+[unity]
+storage_protocol = iSCSI
+san_ip = 192.168.20.40
+san_login = admin
+san_password = VMware1!
+volume_driver = cinder.volume.drivers.dell_emc.unity.Driver
+volume_backend_name = Storage_ISCSI_01
+unity_io_ports = spa_eth0
+driver_ssl_cert_verify = False
+
+
+[backend_defaults]
+use_multipath_for_image_xfer = True
+EOF
+
+
+docker exec -it cinder_volume bash -c "pip3 install storops"
+docker restart cinder_volume
+
+
+
+(hacluster-pacemaker)[root@kolla-controller-02 /]# history
+    1  pcs
+    2  pcs status
+    3  pcs resource cleanup
+    4  pcs status
+    5  history
+(hacluster-pacemaker)[root@kolla-controller-02 /]#
+
+
+docker exec -it skyline_console sed -i 's/Cloud/TCS SovereignSecure Cloud Platform/g' /var/lib/kolla/venv/lib/python3.12/site-packages/skyline_console/static/index.html
+
+pip install python-openstackclient
+
+kolla/share/kolla-ansible/init-runonce
+
+openstack volume service list --insecure
+
+openstack volume type set --name Default 4690ac08-b99e-47e5-b448-8a31646165dd --insecure
+
+openstack volume type list --insecure
+
+cinder --insecure service-disable osp-01 cinder-backup
+
+
+#cloud-config
+ssh_pwauth: True
+users:
+  - default
+  - name: tcsadmin
+    passwd: "$6$AV9zg88V82Aw7q9c$KC0k3Njjk8YYwyrZL8ybX0U55pFbvzSty/S3mdOK9L.FKxrLDv73wdeht7grAg1EMYJjnenMs2ByK3YbNCLmC/"
+    shell: /bin/bash
+    lock-passwd: false
+    ssh_pwauth: True
+    chpasswd: { expire: False }
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: users, admin
+	
+	
+	
+storage should be on compute nodes only
+
+
+---
+collections:
+  - name: https://github.com/openstack/ansible-collection-kolla
+    type: git
+    version: stable/2024.2
+	
+kolla/share/kolla-ansible/requirements.yml
+
+mysql -h console-internal.tcs.cloud -P 3306 -u root_shard_0 -p3z3hgwRpPVFtPERvmCfVEaRcXa14FiYAgqWjs2CM
+
+
+mysql -h osp-internal.cloudbricks.local -P 3306 -u root_shard_0 -pnyEkg386qJDxOzYG0vPw5SfEKKHsali0WmnHzwIM
+
+
+docker exec horizon cp /var/lib/kolla/venv/lib/python3.12/site-packages/static/dashboard/img/logo-splash.svg /var/lib/kolla/venv/lib/python3.12/site-packages/static/dashboard/img/logo-splash.svg.org
+docker cp /etc/kolla/skyline-console/logos/asset/image/cloud-logo.svg horizon:/var/lib/kolla/venv/lib/python3.12/site-packages/static/dashboard/img/logo-splash.svg
+docker exec horizon chmod 644 /var/lib/kolla/venv/lib/python3.12/site-packages/static/dashboard/img/logo-splash.svg
+# docker exec horizon cp /var/lib/kolla/venv/lib/python3.12/site-packages/static/dashboard/img/logo.svg /var/lib/kolla/venv/lib/python3.12/site-packages/static/dashboard/img/logo.svg.org
+
+# docker cp logo-splash.svg horizon:/var/lib/kolla/venv/lib/python3.12/site-packages/static/dashboard/img
+# docker cp logo.svg horizon:/var/lib/kolla/venv/lib/python3.12/site-packages/static/dashboard/img
+
+docker exec horizon cp /var/lib/kolla/venv/lib/python3.12/site-packages/static/dashboard/img/favicon.ico /var/lib/kolla/venv/lib/python3.12/site-packages/static/dashboard/img/favicon.ico.org
+docker cp /etc/kolla/skyline-console/logos/favicon.ico horizon:/var/lib/kolla/venv/lib/python3.12/site-packages/static/dashboard/img/favicon.ico
+docker exec horizon chmod 644 /var/lib/kolla/venv/lib/python3.12/site-packages/static/dashboard/img/favicon.ico
+
+
+
+(horizon)[root@kolla-controller-01 material]# ls
+openstack-one-color-alt.svg  openstack-one-color-alt.svg.old  openstack-one-color.svg
+
+
+
+docker exec horizon cp /var/lib/kolla/venv/lib/python3.12/site-packages/openstack_dashboard/themes/material/templates/material/openstack-one-color-alt.svg /var/lib/kolla/venv/lib/python3.12/site-packages/openstack_dashboard/themes/material/templates/material/openstack-one-color-alt.svg.org
+docker cp /etc/kolla/skyline-console/logos/asset/image/openstack-one-color-alt.svg horizon:/var/lib/kolla/venv/lib/python3.12/site-packages/static/dashboard/img/openstack-one-color-alt.svg
+docker exec horizon chmod 644 /var/lib/kolla/venv/lib/python3.12/site-packages/openstack_dashboard/themes/material/templates/material/openstack-one-color-alt.svg
+
+
+docker exec horizon cp /var/lib/kolla/venv/lib/python3.12/site-packages/openstack_dashboard/themes/material/templates/material/openstack-one-color.svg /var/lib/kolla/venv/lib/python3.12/site-packages/openstack_dashboard/themes/material/templates/material/openstack-one-color.svg.org
+docker cp /etc/kolla/skyline-console/logos/asset/image/openstack-one-color.svg horizon:/var/lib/kolla/venv/lib/python3.12/site-packages/static/dashboard/img/openstack-one-color.svg
+docker exec horizon chmod 644 /var/lib/kolla/venv/lib/python3.12/site-packages/openstack_dashboard/themes/material/templates/material/openstack-one-color.svg
+
+# docker cp horizon:/var/lib/kolla/venv/lib/python3.12/site-packages/openstack_dashboard/themes/material/templates/material/openstack-one-color-alt.svg openstack-one-color-alt.svg
+# docker cp horizon:/var/lib/kolla/venv/lib/python3.12/site-packages/openstack_dashboard/themes/material/templates/material/openstack-one-color.svg openstack-one-color.svg
+
+
+
+
+# keystone_identity_providers:
+#   - name: "cloudbricks"
+#     openstack_domain: "default"
+#     protocol: "openid"
+#     identifier: "https://idp.cloudbricks.local:8443/realms/cloudbricks"
+#     public_name: "SSO"
+#     attribute_mapping: "sso_mapping"
+#     metadata_folder: "/etc/idp/meta-idp"
+#     certificate_file: "/etc/idp/certs/zUVya5LdNZdAd8mEmGdzGX8vpyoltmI8foMPbJ7MQhg.pem"
+
+# keystone_identity_mappings:
+#   - name: "sso_mapping"
+#     file: "/etc/idp/attr_map/attribute_mapping.json"
+
+# keystone_federation_oidc_additional_options:
+#   OIDCTokenBindingPolicy: disabled
+
+# https://docs.openstack.org/kolla-ansible/latest/contributor/setup-identity-provider.html
+
+
+
+docker exec -it hacluster_pacemaker bash -c "pcs resource cleanup"
