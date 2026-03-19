@@ -348,7 +348,7 @@ scheduler_max_attempts = 100
 block_device_allocate_retries = 300
 block_device_allocate_retries_interval = 10
 allow_resize_to_same_host = True
-resize_confirm_window = 1
+resize_confirm_window = 10
 force_config_drive = True
 
 [libvirt]
