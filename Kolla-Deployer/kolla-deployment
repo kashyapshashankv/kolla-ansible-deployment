@@ -497,6 +497,21 @@ Start all the servers and check for unhealthy containers on controller as well a
 
 kolla-ansible mariadb-recovery -i multinode
 
+below host entry is required if going with individual hostname
+
+192.168.42.21	compute.example.com
+192.168.42.21	storage.example.com
+192.168.42.21	identity.example.com
+192.168.42.21	network.example.com
+192.168.42.21	console.example.com
+192.168.42.21	console-api.example.com
+192.168.42.21	placement.example.com
+192.168.42.21	logs.example.com
+192.168.42.21	image.example.com
+192.168.42.21	monitor.example.com
+192.168.42.21	console-old.example.com
+192.168.42.21	ha-instance.example.com
+192.168.42.21	server-console.example.com
 
 
 
