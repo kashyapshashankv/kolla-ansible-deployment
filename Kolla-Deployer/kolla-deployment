@@ -515,6 +515,14 @@ below host entry is required if going with individual hostname
 
 
 
+openstack --insecure flavor create --ram 2048 --vcpus 1 SSC-1V-2G
+openstack --insecure flavor create --ram 4096 --vcpus 2 SSC-2V-4G
+openstack --insecure flavor create --ram 8192 --vcpus 4 SSC-4V-8G
+openstack --insecure flavor create --ram 16384 --vcpus 8 SSC-8V-16G
+openstack --insecure flavor create --ram 32768 --vcpus 16 SSC-16V-32G
+openstack --insecure flavor create --ram 16384 --vcpus 8 --property "pci_passthrough:alias"="rtx6000-gpu:1" SSC-8V-16G-RTX6K
+openstack --insecure flavor create --ram 32768 --vcpus 16 --property "pci_passthrough:alias"="rtx6000-gpu:1" SSC-16V-32G-RTX6K
+
 
 ---
 workaround_ansible_issue_8743: yes
