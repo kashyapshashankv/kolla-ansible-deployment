@@ -353,6 +353,7 @@ force_config_drive = True
 
 [libvirt]
 cpu_mode = host-passthrough
+hw_machine_type=q35
 EOF
 
 
