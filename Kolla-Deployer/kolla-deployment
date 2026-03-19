@@ -544,4 +544,24 @@ enable_heat: "no"
 docker_apt_key_env: {"https_proxy":"http://172.30.19.16:3128"}
 docker_https_proxy: http://172.30.19.16:3128
 
+enable_central_logging: "yes"
+enable_grafana: "yes"
+enable_prometheus: "yes"
+
+haproxy_single_external_frontend: true
+
+nova_external_fqdn: "compute.example.com"
+cinder_external_fqdn: "storage.example.com"
+keystone_external_fqdn: "identity.example.com"
+neutron_external_fqdn: "network.example.com"
+skyline_console_external_fqdn: "console.example.com"
+skyline_apiserver_external_fqdn: "console-api.example.com"
+placement_external_fqdn: "placement.example.com"
+opensearch_dashboards_external_fqdn: "logs.example.com"
+glance_external_fqdn: "image.example.com"
+grafana_external_fqdn: "monitor.example.com"
+horizon_external_fqdn: "console-old.example.com"
+masakari_external_fqdn: "ha-instance.example.com"
+nova_novncproxy_fqdn: "server-console.example.com"
+
 
