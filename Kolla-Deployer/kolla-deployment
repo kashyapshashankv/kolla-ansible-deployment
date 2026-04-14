@@ -407,6 +407,9 @@ openstack image set --project service  amphora-x64-haproxy
 Debugging Amphora
 ssh -i /etc/kolla/octavia-worker/octavia_ssh_key ubuntu@<amphora_ip>
 
+root@poc-host2:~# docker cp version.py nova_compute:/var/lib/kolla/venv/lib/python3.12/site-packages/nova/version.py
+root@poc-host2:~# docker restart nova_compute
+
 
 openstack router show <router_name>
 openstack router set --external-gateway <network_id> --fixed-ip subnet=<subnet_id>,ip-address=<ip_address> <router_id>
