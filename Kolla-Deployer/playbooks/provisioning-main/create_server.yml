@@ -1,0 +1,338 @@
+---
+- name: Deploy Server
+  hosts: localhost
+  gather_facts: false
+  
+  collections:
+    - openstack.cloud
+
+  vars:
+    # --- OpenStack Cloud Configuration ---
+    auth_url_var: 'https://identity.sovereignsecurecloud.com'
+    username_var: 'admin'
+    password_var: 'VMware1!'
+    project_name_var: 'admin'
+    default_user_password: 'VMware1!'
+    project_domain_name_var: Default
+    user_domain_name_var: Default
+    # os_deploy: 'linux'
+    oslist:
+      linux:
+        template: 'Ubuntu24.04'
+        userdata: |
+          #cloud-config
+          ssh_pwauth: True
+          users:
+            - default
+            - name: tcsadmin
+              passwd: "$6$rMgZhsOXugcRXTX3$sK5v77j93eCESmrATPuQPkIpZvDCEyu0nVtXaY8m4gSuufL3ofwapvDaFALWxork7rd8JOhByPX/Y5qKQxEiS0"
+              shell: /bin/bash
+              lock-passwd: false
+              ssh_pwauth: True
+              chpasswd: { expire: False }
+              sudo: ALL=(ALL) NOPASSWD:ALL
+              groups: users, admin
+      windows:
+        template: 'WS2022STD'
+        userdata: |
+          #cloud-config
+          timezone: Asia/Kolkata
+          keyboard:
+            layout: us
+          users:
+            - name: Administrator
+              passwd: VMware1!
+          runcmd:
+            - net user admin /delete
+    
+    # flavor_name: "{{ auth_url_var }}"        
+    network_name: 'VM-NETWORK' # Name of the network/subnet where the IPs must reside  
+    # vip_address: 192.168.10.48  
+    
+    # Define the list of servers to deploy, NOW including static_ip
+    servers_to_deploy:
+      - name: "{{ servername }}"  
+        static_ip: "{{ ip_address }}"  
+      
+      
+
+  tasks:
+    - name: Create a port with a static IP
+      openstack.cloud.port:
+        state: present
+        validate_certs: false
+        auth:
+          auth_url: "{{ auth_url_var }}"
+          username: "{{ username_var }}"
+          password: "{{ password_var }}"
+          project_name: "{{ project_name_var }}"
+          project_domain_name: "{{ project_domain_name_var }}"
+          user_domain_name: "{{ user_domain_name_var}}"
+        name: "{{ item.name }}-prod-port" 
+        network: "{{ network_name }}" 
+        fixed_ips:
+          - ip_address: "{{ item.static_ip }}" 
+      register: static_port
+      with_items: "{{ servers_to_deploy }}"
+
+    - name: Create OpenStack instances
+      openstack.cloud.server:
+        state: present
+        validate_certs: false
+        auth:
+          auth_url: "{{ auth_url_var }}"
+          username: "{{ username_var }}"
+          password: "{{ password_var }}"
+          project_name: "{{ project_name_var }}"
+          project_domain_name: "{{ project_domain_name_var }}"
+          user_domain_name: "{{ user_domain_name_var}}"
+        name: "{{ item.name }}"
+        flavor: "{{ flavor_name }}"
+        wait: true
+        timeout: 300
+        boot_from_volume: true
+        terminate_volume: true
+        image: "{{ oslist[os_deploy]['template'] }}"
+        volume_size: 100
+        auto_floating_ip: false
+        nics:
+          - port-name: "{{ item.name }}-prod-port"
+        userdata: "{{ oslist[os_deploy]['userdata'] }}"
+      with_items: "{{ servers_to_deploy }}"
+      register: _create_instances
+
+    - name: Create in-memory Ansible inventory
+      add_host:
+        name: "{{ ip_address }}"
+        groups: windows_nodes
+        ansible_user: Administrator
+        host: "{{ ip_address }}"
+        ansible_password: "{{ default_user_password }}" 
+        ansible_connection: winrm  
+        ansible_winrm_transport: ntlm
+        ansible_winrm_server_cert_validation: ignore
+        ansible_port: 5985
+      when: os_deploy | regex_search('^windows')  
+
+    - name: Create in-memory Ansible inventory
+      add_host:
+        name: "{{ ip_address }}"
+        groups: linux_nodes
+        ansible_user: tcsadmin
+        host: "{{ ip_address }}"
+        ansible_password: "{{ default_user_password }}"  
+        ansible_remote_tmp: /tmp/.ansible/tmp
+        ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" 
+      when: os_deploy | regex_search('^linux')  
+
+    - name: Wait for 2 mins for Server to come up
+      pause:
+        minutes: 2 
+      when: os_deploy | regex_search('^linux')
+
+    - name: Wait for 5 mins for Server to come up
+      pause:
+        minutes: 5 
+      when: os_deploy | regex_search('^windows')
+
+- name: Post Configuration Linux
+  hosts: linux_nodes
+  become: yes
+  vars:
+    tomcat_major_version: 11
+    tomcat_version: 11.0.14
+    tomcat_download_url: "https://dlcdn.apache.org/tomcat/tomcat-{{ tomcat_major_version }}/v{{ tomcat_version }}/bin/apache-tomcat-{{ tomcat_version }}.tar.gz"
+    tomcat_home: /opt/tomcat
+    tomcat_user: tomcat
+    tomcat_group: tomcat
+    java_home: /usr/lib/jvm/java-1.17.0-openjdk-amd64
+    manager_password: "VMware1!"
+    admin_password: "VMware1!" 
+  tasks:
+    - block:
+      - name: Change HTTP sources to HTTPS in /etc/apt/sources.list.d/ubuntu.sources
+        ansible.builtin.replace:
+          path: /etc/apt/sources.list.d/ubuntu.sources
+          regexp: '^URIs: http:'
+          replace: 'URIs: https:'
+          backup: yes
+
+      - name: Update the APT package cache (using new HTTPS sources)
+        ansible.builtin.apt:
+          update_cache: yes
+          cache_valid_time: 3600
+    
+      - name: Perform a full system upgrade
+        ansible.builtin.apt:
+          upgrade: dist
+          autoclean: yes
+
+      - name: Ensure ubuntu-drivers-common is installed
+        ansible.builtin.apt:
+          name: ubuntu-drivers-common
+          state: present
+          update_cache: yes
+
+      - name: Automatically install recommended drivers
+        ansible.builtin.command: ubuntu-drivers install
+        register: driver_output
+        changed_when: "'All managed devices are already using the best available driver' not in driver_output.stdout"
+
+      - name: Reboot
+        reboot:
+      when: os_deploy | regex_search('^linux')
+
+    - block:
+      - name: Update apt package cache
+        ansible.builtin.apt:
+          update_cache: yes
+        
+      - name: Install Java OpenJDK 17 (Prerequisite)
+        ansible.builtin.apt:
+          name: openjdk-17-jdk
+          state: present
+
+      - name: Create dedicated 'tomcat' group
+        ansible.builtin.group:
+          name: "{{ tomcat_group }}"
+          state: present
+
+      - name: Create dedicated 'tomcat' user
+        ansible.builtin.user:
+          name: "{{ tomcat_user }}"
+          group: "{{ tomcat_group }}"
+          home: "{{ tomcat_home }}"
+          shell: /bin/false
+          create_home: no # We create this directory next for extraction
+          state: present
+
+      - name: Create installation directory
+        ansible.builtin.file:
+          path: "{{ tomcat_home }}"
+          state: directory
+          mode: '0755'
+
+      - name: Download Tomcat archive
+        ansible.builtin.get_url:
+          url: "{{ tomcat_download_url }}"
+          dest: /tmp/tomcat.tar.gz
+          mode: '0644'
+
+      - name: Extract Tomcat archive to installation directory
+        ansible.builtin.unarchive:
+          src: /tmp/tomcat.tar.gz
+          dest: "{{ tomcat_home }}"
+          remote_src: yes
+          owner: "{{ tomcat_user }}"
+          group: "{{ tomcat_group }}"
+          extra_opts:
+            - --strip-components=1
+            
+      - name: Remove the downloaded archive file
+        ansible.builtin.file:
+          path: /tmp/tomcat.tar.gz
+          state: absent
+
+      - name: Set correct ownership recursively on the entire installation directory
+        ansible.builtin.file:
+          path: "{{ tomcat_home }}"
+          owner: "{{ tomcat_user }}"
+          group: "{{ tomcat_group }}"
+          state: directory
+          recurse: yes
+
+      - name: Grant group read/execute permissions to conf directory
+        ansible.builtin.file:
+          path: "{{ tomcat_home }}/conf"
+          group: "{{ tomcat_group }}"
+          mode: 'g+rx'
+          recurse: yes
+
+      - name: Remove RemoteAddrValve restriction for Manager App
+        ansible.builtin.replace:
+          path: "{{ tomcat_home }}/webapps/manager/META-INF/context.xml"
+          regexp: '(<Valve className="org\.apache\.catalina\.valves\.RemoteAddrValve" allow="127\.\d+\.\d+\.\d+|::1|0:0:0:0:0:0:0:1" />)'
+          replace: ''
+          backup: yes
+        
+      - name: Remove RemoteAddrValve restriction for Host Manager App
+        ansible.builtin.replace:
+          path: "{{ tomcat_home }}/webapps/host-manager/META-INF/context.xml"
+          regexp: '(<Valve className="org\.apache\.catalina\.valves\.RemoteAddrValve" allow="127\.\d+\.\d+\.\d+|::1|0:0:0:0:0:0:0:1" />)'
+          replace: ''
+          backup: yes
+
+
+      - name: Create tomcat.service file (Requires tomcat.service.j2 template)
+        ansible.builtin.template:
+          src: tomcat.service.j2
+          dest: /etc/systemd/system/tomcat.service
+          owner: root
+          group: root
+          mode: '0644'
+
+      - name: Reload systemd daemon to recognize new service
+        ansible.builtin.systemd_service:
+          daemon_reload: yes
+
+      - name: Enable Tomcat service to start at boot
+        ansible.builtin.systemd_service:
+          name: tomcat
+          enabled: yes
+
+      - name: Start Tomcat service
+        ansible.builtin.systemd_service:
+          name: tomcat
+          state: started
+      when: os_deploy | regex_search('^linux') and 'Yes' in webapp
+
+    - block:
+      - name: Rename the nic to Prod on Windows
+        win_shell: Get-NetIPAddress -IPAddress "{{ ip_address }}" | Get-NetAdapter | Rename-NetAdapter -NewName "Prod"   
+        ignore_errors: true 
+      when: os_deploy | regex_search('^windows')
+
+    - block:
+      - name: IIS Role Installation
+        win_shell: |
+          Install-WindowsFeature -name Web-Server -IncludeManagementTools
+
+      - name: IIS Hardening Script Copy
+        win_copy:
+          src: IISHardening.ps1
+          dest: C:\Temp\IISHardening.ps1
+
+
+      - name: IIS Hardening Script Execution
+        win_shell: C:\Temp\IISHardening.ps1
+      when: os_deploy | regex_search('^windows') and 'Yes' in webapp
+
+
+- name: Post Configuration Windows
+  hosts: windows_nodes
+  remote_user: administrator
+  tasks:
+
+
+    - block:
+      - name: Rename the nic to Prod on Windows
+        win_shell: Get-NetIPAddress -IPAddress "{{ ip_address }}" | Get-NetAdapter | Rename-NetAdapter -NewName "Prod"   
+        ignore_errors: true 
+      when: os_deploy | regex_search('^windows')
+
+    - block:
+      - name: IIS Role Installation
+        win_shell: |
+          Install-WindowsFeature -name Web-Server -IncludeManagementTools
+
+      - name: IIS Hardening Script Copy
+        win_copy:
+          src: IISHardening.ps1
+          dest: C:\Temp\IISHardening.ps1
+
+
+      - name: IIS Hardening Script Execution
+        win_shell: C:\Temp\IISHardening.ps1
+      when: os_deploy | regex_search('^windows') and 'Yes' in webapp
+
+
