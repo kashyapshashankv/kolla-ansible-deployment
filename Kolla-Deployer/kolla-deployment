@@ -362,6 +362,10 @@ cat << EOF > /etc/kolla/config/neutron/ml2_conf.ini
 network_vlan_ranges = physnet1:1:4094
 EOF
 
+cat << EOF > /etc/kolla/config/nova/policy.yaml
+"os_compute_api:os-console-auth-tokens": "rule:admin_or_owner"
+EOF
+
 
 #### bootstrap
 kolla-ansible octavia-certificates -i multinode
